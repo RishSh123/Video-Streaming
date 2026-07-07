@@ -16,6 +16,13 @@ app.use(express.json({ limit: "16kb" })); // Parse incoming JSON payloads
 app.use(express.urlencoded({ extended: true, limit: "16kb" })); // Parse URL-encoded strings (form fields)
 app.use(cookieParser()); // Read/Write secure HTTP-only user session cookies
 
+import userRouter from "./routes/user.routes.js";
+
+// --- DECLARE ROUTE PATHS HERE ---
+// This mounts user paths under the standardized versioned path /api/v1/users
+app.use("/api/v1/users", userRouter);
+
+
 // Centralized Global Error Handling Middleware
 app.use((err, req, res, next) => {
     if (err instanceof ApiError) {

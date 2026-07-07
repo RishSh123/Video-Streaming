@@ -51,11 +51,11 @@ const userSchema = new Schema(
 );
 
 // Mongoose Pre-save Hook: Hashes password automatically right before saving to DB
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
+// Clean async implementation without needing the manual callback next parameter
+userSchema.pre("save", async function () {
+    if (!this.isModified("password")) return;
 
     this.password = await bcrypt.hash(this.password, 10);
-    next();
 });
 
 // Method to verify if entered plain text password matches our cryptographic hash
