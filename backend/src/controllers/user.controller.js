@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { uploadToImageKit } from "../utils/cloudStorage.js";
 
 // Helper function to generate tokens and update the refresh token in the database
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -38,18 +39,24 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     // Handle uploaded avatar file from Multer
+    // --- REPLACE MOCK ASSIGNMENT WITH THIS CLOUD INTEGRATION ---
+    // Handle uploaded avatar file from Multer
     const avatarLocalPath = req.files?.avatar?.[0]?.path;
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar image file is required");
     }
 
-    // Mock cloud URL for now (We will upgrade this to ImageKit/S3 in Milestone 3)
-    const avatarUrl = `/uploads/mock-${req.files.avatar[0].filename}`;
-    let coverImageUrl = "";
-    
-    if (req.files?.coverImage?.[0]?.path) {
-        coverImageUrl = `/uploads/mock-${req.files.coverImage[0].filename}`;
+    // Upload to ImageKit cloud folder explicitly separated for profile media
+    const avatarUrl = await uploadToImageKit(avatarLocalPath, "/avatars");
+    if (!avatarUrl) {
+        throw new ApiError(500, "Failed to upload avatar to cloud media storage");
     }
+
+    let coverImageUrl = "";
+    if (req.files?.coverImage?.[0]?.path) {
+        coverImageUrl = await uploadToImageKit(req.files.coverImage[0].path, "/cover-images");
+    }
+    // ------------------------------------------------------------
 
     // Create and save user in MongoDB
     const user = await User.create({
@@ -205,7 +212,10 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     }
 
     // Mock cloud URL pathway for Milestone 2
-    const avatarUrl = `/uploads/mock-updated-${req.file.filename}`;
+    const avatarUrl = await uploadToImageKit(avatarLocalPath, "/avatars");
+    if (!avatarUrl) {
+        throw new ApiError(500, "Failed to upload new avatar asset");
+    }
 
     const user = await User.findByIdAndUpdate(
         req.user?._id,
