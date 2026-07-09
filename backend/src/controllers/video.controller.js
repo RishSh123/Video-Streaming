@@ -107,8 +107,72 @@ const getVideoById = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, video, "Video record retrieved successfully"));
 });
 
+// 4. UPDATE VIDEO DETAILS & THUMBNAIL
+const updateVideo = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const { title, description, category } = req.body;
+
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "Video track not found");
+    }
+
+    // Security Guard: Check if the logged-in user actually owns this video
+    if (video.owner.toString() !== req.user?._id.toString()) {
+        throw new ApiError(403, "You do not have permission to update this video");
+    }
+
+    // Update text fields if provided
+    if (title) video.title = title;
+    if (description) video.description = description;
+    if (category) video.category = category;
+
+    // Handle new thumbnail upload if a file is sent
+    const thumbnailLocalPath = req.file?.path;
+    if (thumbnailLocalPath) {
+        const newThumbnailUrl = await uploadToImageKit(thumbnailLocalPath, "/thumbnails");
+        if (!newThumbnailUrl) {
+            throw new ApiError(500, "Failed to update thumbnail file in cloud storage");
+        }
+        video.thumbnailUrl = newThumbnailUrl;
+    }
+
+    await video.save();
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, video, "Video details updated successfully"));
+});
+
+// 5. DELETE A VIDEO
+const deleteVideo = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "Video track not found");
+    }
+
+    // Security Guard: Check if the logged-in user actually owns this video
+    if (video.owner.toString() !== req.user?._id.toString()) {
+        throw new ApiError(403, "You do not have permission to delete this video");
+    }
+
+    // Remove document record from MongoDB
+    await Video.findByIdAndDelete(videoId);
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Video removed from system successfully"));
+});
+
+
 export {
     publishAVideo,
     getAllVideos,
-    getVideoById
+    getVideoById,
+    updateVideo,  
+    deleteVideo   
 };
