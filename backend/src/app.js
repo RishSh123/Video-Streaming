@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+
+
 import { ApiError } from "./utils/ApiError.js";
 
 const app = express();
@@ -16,11 +18,16 @@ app.use(express.json({ limit: "16kb" })); // Parse incoming JSON payloads
 app.use(express.urlencoded({ extended: true, limit: "16kb" })); // Parse URL-encoded strings (form fields)
 app.use(cookieParser()); // Read/Write secure HTTP-only user session cookies
 
-import userRouter from "./routes/user.routes.js";
 
 // --- DECLARE ROUTE PATHS HERE ---
 // This mounts user paths under the standardized versioned path /api/v1/users
+
+import userRouter from "./routes/user.routes.js";
+import videoRouter from "./routes/video.routes.js";
+
 app.use("/api/v1/users", userRouter);
+
+app.use("/api/v1/videos", videoRouter);
 
 
 // Centralized Global Error Handling Middleware
