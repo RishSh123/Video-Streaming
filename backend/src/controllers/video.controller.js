@@ -2,7 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Video } from "../models/video.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { uploadVideoToCloudPipeline, uploadToImageKit } from "../utils/cloudStorage.js";
+import { uploadVideoToCloudPipeline, uploadToImageKit, deleteFromS3, deleteFromImageKit } from "../utils/cloudStorage.js";
 
 // 1. PUBLISH A VIDEO
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -155,19 +155,31 @@ const deleteVideo = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video track not found");
     }
 
-    // Security Guard: Check if the logged-in user actually owns this video
+    // Security Guard: Check ownership
     if (video.owner.toString() !== req.user?._id.toString()) {
         throw new ApiError(403, "You do not have permission to delete this video");
     }
 
-    // Remove document record from MongoDB
+    // 1. Extract the raw S3 filename from the HLS string
+    // Our HLS URL looks like: ...?ik-s=1783621420047-video.mp4&ik-transform=f-hls
+    const s3KeyMatch = video.videoUrl.match(/ik-s=([^&]+)/);
+    if (s3KeyMatch && s3KeyMatch[1]) {
+        const s3Key = s3KeyMatch[1];
+        await deleteFromS3(s3Key); // Purge raw video from S3
+    }
+
+    // 2. Purge thumbnail from ImageKit Media Library
+    if (video.thumbnailUrl) {
+        await deleteFromImageKit(video.thumbnailUrl);
+    }
+
+    // 3. Remove document record from MongoDB
     await Video.findByIdAndDelete(videoId);
 
     return res
         .status(200)
-        .json(new ApiResponse(200, {}, "Video removed from system successfully"));
+        .json(new ApiResponse(200, {}, "Video and associated cloud assets removed successfully"));
 });
-
 
 export {
     publishAVideo,

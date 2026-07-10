@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand,DeleteObjectCommand } from "@aws-sdk/client-s3";
 import ImageKit from "imagekit";
 import fs from "fs";
 import path from "path";
@@ -82,5 +82,53 @@ export const uploadVideoToCloudPipeline = async (localFilePath) => {
         if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
         console.error("AWS S3 Video Pipeline Error:", error);
         return null;
+    }
+};
+
+/**
+ * Deletes an object from the private AWS S3 bucket
+ */
+export const deleteFromS3 = async (fileKey) => {
+    try {
+        if (!fileKey) return;
+        
+        await s3Client.send(new DeleteObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: fileKey
+        }));
+    } catch (error) {
+        console.error("Failed to delete video asset from S3:", error);
+    }
+};
+
+/**
+ * Deletes a file from the ImageKit Media Library using its URL or file ID
+ * (ImageKit allows searching and deleting by filename/path easily)
+ */
+/**
+ * Deletes a file from the ImageKit Media Library using its exact name
+ */
+export const deleteFromImageKit = async (fileUrl) => {
+    try {
+        if (!fileUrl) return;
+
+        // Extract the filename from the URL (the last part after the slash)
+        // E.g., https://ik.imagekit.io/id/thumbnails/123-pic.jpg -> 123-pic.jpg
+        const fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+
+        // Search for the file using the exact fileName parameter
+        const files = await imagekit.listFiles({
+            searchQuery: `name = "${fileName}"`
+        });
+
+        // If found, target the explicit unique asset fileId for absolute deletion
+        if (files && files.length > 0) {
+            await imagekit.deleteFile(files[0].fileId);
+            console.log(`Successfully purged thumbnail from ImageKit: ${fileName}`);
+        } else {
+            console.log(`Thumbnail not found in ImageKit search: ${fileName}`);
+        }
+    } catch (error) {
+        console.error("Failed to delete thumbnail asset from ImageKit:", error);
     }
 };
