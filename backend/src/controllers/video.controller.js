@@ -98,13 +98,23 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video track not found");
     }
 
-    // Increment view count systematically per hit
+    // 1. Increment view count systematically per hit
     video.views += 1;
     await video.save({ validateBeforeSave: false });
 
+    // 2. Watch History Log: If a user is logged in, append this video to their history array
+    if (req.user?._id) {
+        await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $addToSet: { watchHistory: videoId } // $addToSet ensures the ID is unique in the array
+            }
+        );
+    }
+
     return res
         .status(200)
-        .json(new ApiResponse(200, video, "Video record retrieved successfully"));
+        .json(new ApiResponse(200, video, "Video record retrieved and added to watch history successfully"));
 });
 
 // 4. UPDATE VIDEO DETAILS & THUMBNAIL
@@ -181,10 +191,73 @@ const deleteVideo = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "Video and associated cloud assets removed successfully"));
 });
 
+// 6. GET RELATED/RECOMMENDED VIDEOS
+const getRelatedVideos = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video identifier format");
+    }
+
+    const currentVideo = await Video.findById(videoId);
+    if (!currentVideo) {
+        throw new ApiError(404, "Target video track not found");
+    }
+
+    // Run an aggregation to find similar content matching category or tags
+    const recommendations = await Video.aggregate([
+        {
+            $match: {
+                _id: { $ne: new mongoose.Types.ObjectId(videoId) }, // Exclude the current video
+                isPublished: true,
+                $or: [
+                    { category: currentVideo.category },
+                    { tags: { $in: currentVideo.tags } }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                owner: { $first: "$ownerDetails" }
+            }
+        },
+        {
+            $project: {
+                ownerDetails: 0
+            }
+        },
+        {
+            $limit: 10 // Return a clean top-10 recommended sidebar track list
+        }
+    ]);
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, recommendations, "Related videos compiled successfully"));
+});
+
 export {
     publishAVideo,
     getAllVideos,
     getVideoById,
     updateVideo,  
-    deleteVideo   
+    deleteVideo,
+    getRelatedVideos  
 };

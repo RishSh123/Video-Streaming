@@ -4,7 +4,8 @@ import {
     getAllVideos, 
     getVideoById, 
     updateVideo, 
-    deleteVideo 
+    deleteVideo,
+    getRelatedVideos 
 } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -13,6 +14,8 @@ const router = Router();
 
 // Public routes (anyone can browse catalog or hit a specific video details page)
 router.route("/").get(getAllVideos);
+// Add this right along your other individual video routes
+router.route("/v/:videoId/related").get(getRelatedVideos);
 router.route("/v/:videoId")
     .get(getVideoById)
     .patch(verifyJWT, upload.single("thumbnail"), updateVideo) // ◄── Add this for updating details/thumbnail
