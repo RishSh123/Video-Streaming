@@ -3,77 +3,64 @@ import { useNavigate, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import apiClient from "../utils/api";
 
-export default function Register({ isDarkMode, toggleTheme }) { // ◄── Destructure props here
+export default function Login({ isDarkMode, toggleTheme }) {
   const navigate = useNavigate();
   const [error, setError] = useState("");
 
   // Controlled form state parameters
   const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    fullName: "",
+    usernameOrEmail: "",
     password: "",
   });
 
-  const [avatar, setAvatar] = useState(null);
-  const [coverImage, setCoverImage] = useState(null);
-
+  // Handle textual input field changes smoothly
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // React Query Mutation: Handles the asynchronous session establishment pipeline cleanly
   const mutation = useMutation({
-    mutationFn: async (userData) => {
-      const response = await apiClient.post("/users/register", userData, {
-        headers: { "Content-Type": "multipart/form-data" },
+    mutationFn: async (credentials) => {
+      // Handles parsing backend logic check via login route endpoint
+      const response = await apiClient.post("/users/login", {
+        // Handle variations if user provides email vs username
+        email: credentials.usernameOrEmail.includes("@") ? credentials.usernameOrEmail.trim() : undefined,
+        username: !credentials.usernameOrEmail.includes("@") ? credentials.usernameOrEmail.toLowerCase().trim() : undefined,
+        password: credentials.password
       });
       return response.data;
     },
-    onSuccess: () => {
-      navigate("/login");
+    onSuccess: (data) => {
+      // Redirect user directly into the video stream dashboard view upon verification
+      navigate("/home");
     },
     onError: (err) => {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      setError(err.response?.data?.message || "Invalid authentication credentials.");
     },
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
-
-    if (!avatar) {
-      setError("Avatar image is required");
-      return;
-    }
-
-    const data = new FormData();
-    data.append("username", formData.username.toLowerCase().trim());
-    data.append("email", formData.email.trim());
-    data.append("fullName", formData.fullName.trim());
-    data.append("password", formData.password);
-    data.append("avatar", avatar);
-    if (coverImage) {
-      data.append("coverImage", coverImage);
-    }
-
-    mutation.mutate(data);
+    mutation.mutate(formData);
   };
 
   return (
     <div className="h-screen w-screen flex flex-col md:flex-row overflow-hidden font-sans transition-colors duration-300">
       
-      {/* LEFT SIDE: Cinematic Brand Panel */}
+      {/* LEFT SIDE: Cinematic Brand Panel (Stays matching with the registration split view) */}
       <div className="hidden md:flex md:w-1/2 flex-col justify-between p-12 bg-gradient-to-br from-[#11131e] via-[#0c0d14] to-[#090a0f] border-r border-slate-900/40 relative overflow-hidden h-full">
         <div className="absolute top-[-30%] left-[-20%] w-[90%] h-[90%] rounded-full bg-indigo-500/10 blur-[140px] pointer-events-none" />
         <div className="absolute bottom-[-30%] right-[-10%] w-[80%] h-[80%] rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
 
+        {/* Brand Header Logo */}
         <div className="relative z-10">
           <Link to="/home" className="inline-flex items-center gap-3 group transition-transform duration-200 active:scale-95">
             <svg className="w-9 h-9 transform group-hover:rotate-6 transition-transform duration-300" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M75 43.3013C81.6667 47.1503 81.6667 56.8497 75 60.6987L37.5 82.3506C30.8333 86.1996 22.5 81.35 22.5 73.6519L22.5 30.3481C22.5 22.65 30.8333 17.8004 37.5 21.6494L75 43.3013Z" fill="url(#brandLogoGrad)" />
+              <path d="M75 43.3013C81.6667 47.1503 81.6667 56.8497 75 60.6987L37.5 82.3506C30.8333 86.1996 22.5 81.35 22.5 73.6519L22.5 30.3481C22.5 22.65 30.8333 17.8004 37.5 21.6494L75 43.3013Z" fill="url(#loginLogoGrad)" />
               <path d="M42 39.6603C44.2222 40.9434 44.2222 44.1593 42 45.4424L32 51.2167C29.7778 52.4998 27 50.8918 27 48.3245L27 36.7782C27 34.211 29.7778 32.603 32 33.8861L42 39.6603Z" fill="white" fillOpacity="0.95" />
               <defs>
-                <linearGradient id="brandLogoGrad" x1="22.5" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+                <linearGradient id="loginLogoGrad" x1="22.5" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
                   <stop stopColor="#6366f1" />
                   <stop offset="1" stopColor="#3b82f6" />
                 </linearGradient>
@@ -85,15 +72,16 @@ export default function Register({ isDarkMode, toggleTheme }) { // ◄── Des
           </Link>
         </div>
 
+        {/* Narrative Copy */}
         <div className="max-w-md space-y-4 my-auto relative z-10">
           <h1 className="text-5xl font-black tracking-tight text-white leading-[1.15]">
-            Your space to discover <br />
+            Welcome back to <br />
             <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
-              and share stories.
+              your dashboard.
             </span>
           </h1>
           <p className="text-slate-400 text-sm font-normal leading-relaxed max-w-sm">
-            Welcome to viewdeo, an open platform designed to connect people through clear, simple video sharing. Explore channels, organize custom playlists, and engage with your favorite creators in a streamlined space built for everyone.
+            Log into your viewdeo profile to seamlessly view customized subscription feeds, interact with global streaming channels, and check your saved collections.
           </p>
         </div>
 
@@ -102,22 +90,21 @@ export default function Register({ isDarkMode, toggleTheme }) { // ◄── Des
         </div>
       </div>
 
-      {/* RIGHT SIDE: Dynamic Interface Workspace Container */}
+      {/* RIGHT SIDE: Interactive Login Interface Workspace Workspace Container */}
       <div className={`w-full md:w-1/2 flex flex-col justify-center items-center p-6 md:p-12 overflow-y-auto h-full max-h-screen transition-colors duration-300 relative ${
         isDarkMode ? "bg-[#0d0e15]" : "bg-[#f8fafc]"
       }`}>
         
-        {/* UPPER RIGHT CORNER: Absolute Fixed Theme Switcher Hook */}
+        {/* UPPER RIGHT CORNER: Absolute Fixed Theme Switcher Button Hook */}
         <div className="absolute top-6 right-6 z-20">
           <button
-            onClick={toggleTheme} // ◄── Calls global function passed from App.jsx
+            onClick={toggleTheme}
             type="button"
             className={`p-2.5 rounded-xl border transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 flex items-center justify-center shadow-sm ${
               isDarkMode 
                 ? "bg-[#161925] border-slate-800 text-amber-400 hover:bg-[#1f2335]" 
                 : "bg-white border-slate-200 text-indigo-600 hover:bg-slate-50"
             }`}
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
             {isDarkMode ? (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -137,10 +124,10 @@ export default function Register({ isDarkMode, toggleTheme }) { // ◄── Des
           <div className="block md:hidden text-center mb-6">
             <Link to="/home" className="inline-flex items-center gap-2.5">
               <svg className="w-7 h-7" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M75 43.3013C81.6667 47.1503 81.6667 56.8497 75 60.6987L37.5 82.3506C30.8333 86.1996 22.5 81.35 22.5 73.6519L22.5 30.3481C22.5 22.65 30.8333 17.8004 37.5 21.6494L75 43.3013Z" fill="url(#mobileLogoGrad)" />
+                <path d="M75 43.3013C81.6667 47.1503 81.6667 56.8497 75 60.6987L37.5 82.3506C30.8333 86.1996 22.5 81.35 22.5 73.6519L22.5 30.3481C22.5 22.65 30.8333 17.8004 37.5 21.6494L75 43.3013Z" fill="url(#mobileLoginLogoGrad)" />
                 <path d="M42 39.6603C44.2222 40.9434 44.2222 44.1593 42 45.4424L32 51.2167C29.7778 52.4998 27 50.8918 27 48.3245L27 36.7782C27 34.211 29.7778 32.603 32 33.8861L42 39.6603Z" fill="white" />
                 <defs>
-                  <linearGradient id="mobileLogoGrad" x1="22.5" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
+                  <linearGradient id="mobileLoginLogoGrad" x1="22.5" y1="15" x2="85" y2="85" gradientUnits="userSpaceOnUse">
                     <stop stopColor="#6366f1" />
                     <stop offset="1" stopColor="#3b82f6" />
                   </linearGradient>
@@ -152,13 +139,13 @@ export default function Register({ isDarkMode, toggleTheme }) { // ◄── Des
             </Link>
           </div>
 
-          <h2 className={`text-2xl font-extrabold tracking-tight text-center md:text-left transition-colors ${
+          <h2 className={`text-4xl font-bold tracking-tight text-center mb-7 md:text-left transition-colors ${
             isDarkMode ? "text-white" : "text-slate-900"
-          }`}>Create your account</h2>
+          }`}>Login to Your Account</h2>
           <p className={`text-xs mb-6 text-center md:text-left transition-colors ${
             isDarkMode ? "text-slate-400" : "text-slate-500"
           }`}>
-            Join our community and start streaming today.
+            
           </p>
 
           {error && (
@@ -168,71 +155,33 @@ export default function Register({ isDarkMode, toggleTheme }) { // ◄── Des
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full Name */}
+            {/* Username or Email Input Field */}
             <div>
-              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 transition-colors ${
+              <label className={`block text-[12px] font-bold uppercase tracking-wider mb-1.5 transition-colors ${
                 isDarkMode ? "text-slate-400" : "text-slate-600"
-              }`}>Full Name</label>
+              }`}>Username or Email</label>
               <input
                 type="text"
-                name="fullName"
+                name="usernameOrEmail"
                 required
-                value={formData.fullName}
+                value={formData.usernameOrEmail}
                 onChange={handleInputChange}
                 className={`w-full text-xs font-medium rounded-xl px-3.5 py-2.5 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500/20 shadow-sm border ${
                   isDarkMode 
                     ? "bg-[#161925] border-slate-800/80 text-white placeholder-slate-500 focus:border-indigo-500" 
                     : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:bg-white"
                 }`}
-                placeholder="Enter your full name"
+                placeholder="Enter your username or email"
               />
             </div>
 
-            {/* Username */}
+            {/* Password Input Field */}
             <div>
-              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 transition-colors ${
-                isDarkMode ? "text-slate-400" : "text-slate-600"
-              }`}>Username</label>
-              <input
-                type="text"
-                name="username"
-                required
-                value={formData.username}
-                onChange={handleInputChange}
-                className={`w-full text-xs font-medium rounded-xl px-3.5 py-2.5 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500/20 shadow-sm border ${
-                  isDarkMode 
-                    ? "bg-[#161925] border-slate-800/80 text-white placeholder-slate-500 focus:border-indigo-500" 
-                    : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:bg-white"
-                }`}
-                placeholder="johndoe"
-              />
-            </div>
-
-            {/* Email Address */}
-            <div>
-              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 transition-colors ${
-                isDarkMode ? "text-slate-400" : "text-slate-600"
-              }`}>Email Address</label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleInputChange}
-                className={`w-full text-xs font-medium rounded-xl px-3.5 py-2.5 transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500/20 shadow-sm border ${
-                  isDarkMode 
-                    ? "bg-[#161925] border-slate-800/80 text-white placeholder-slate-500 focus:border-indigo-500" 
-                    : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:bg-white"
-                }`}
-                placeholder="Enter your email address"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 transition-colors ${
-                isDarkMode ? "text-slate-400" : "text-slate-600"
-              }`}>Password</label>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className={`block text-[12px] font-bold uppercase tracking-wider transition-colors ${
+                  isDarkMode ? "text-slate-400" : "text-slate-600"
+                }`}>Password</label>
+              </div>
               <input
                 type="password"
                 name="password"
@@ -244,54 +193,25 @@ export default function Register({ isDarkMode, toggleTheme }) { // ◄── Des
                     ? "bg-[#161925] border-slate-800/80 text-white placeholder-slate-500 focus:border-indigo-500" 
                     : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:bg-white"
                 }`}
-                placeholder="Create a secure password"
+                placeholder="Enter your password"
               />
             </div>
 
-            {/* File Asset Upload Selectors */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className={`p-3 border rounded-xl transition-colors ${
-                isDarkMode ? "bg-[#161925] border-slate-800/60" : "bg-white border-slate-200 shadow-sm"
-              }`}>
-                <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
-                  isDarkMode ? "text-slate-400" : "text-slate-600"
-                }`}>Avatar *</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  required
-                  onChange={(e) => setAvatar(e.target.files[0])}
-                  className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-bold file:bg-indigo-950/60 file:text-indigo-400 hover:file:bg-indigo-900/60 file:cursor-pointer transition-colors"
-                />
-              </div>
-              <div className={`p-3 border rounded-xl transition-colors ${
-                isDarkMode ? "bg-[#161925] border-slate-800/60" : "bg-white border-slate-200 shadow-sm"
-              }`}>
-                <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
-                  isDarkMode ? "text-slate-400" : "text-slate-600"
-                }`}>Cover Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setCoverImage(e.target.files[0])}
-                  className="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-bold file:bg-slate-900 file:text-slate-400 hover:file:bg-slate-800 file:cursor-pointer transition-colors"
-                />
-              </div>
-            </div>
-
+            {/* Submit Execution Button */}
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl mt-3 cursor-pointer focus:outline-none disabled:bg-indigo-800 transition-all text-xs shadow-lg shadow-indigo-600/15 active:scale-[0.99]"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl mt-4 cursor-pointer focus:outline-none disabled:bg-indigo-800 transition-all text-s shadow-lg shadow-indigo-600/15 active:scale-[0.99]"
             >
-              {mutation.isPending ? "Creating Account..." : "Sign Up"}
+              {mutation.isPending ? "Signing in..." : "Log In"}
             </button>
           </form>
 
+          {/* Routing Redirection Footer Link */}
           <p className="text-center text-xs mt-6 font-medium">
-            <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>Already have an account? </span>
-            <Link to="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors font-semibold">
-              Log in
+            <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>Don't have an account yet? </span>
+            <Link to="/register" className="text-indigo-400 hover:text-indigo-300 transition-colors font-semibold">
+              Sign up
             </Link>
           </p>
         </div>
