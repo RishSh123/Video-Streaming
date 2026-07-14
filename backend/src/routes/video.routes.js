@@ -7,10 +7,14 @@ import {
     deleteVideo,
     getRelatedVideos 
 } from "../controllers/video.controller.js";
+import { getVideosByChannel } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
+// Publicly accessible video index filtering by creator channel
+
 const router = Router();
+
 
 // Public routes (anyone can browse catalog or hit a specific video details page)
 router.route("/").get(getAllVideos);
@@ -30,5 +34,6 @@ router.route("/publish").post(
     ]),
     publishAVideo
 );
+router.route("/c/:username").get(getVideosByChannel);
 
 export default router;

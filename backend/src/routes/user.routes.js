@@ -3,12 +3,15 @@ import {
     loginUser, 
     logoutUser, 
     registerUser, 
-    changeCurrentPassword,  // ◄── Add this
-    updateAccountDetails,   // ◄── Add this
-    updateUserAvatar        // ◄── Add this
+    changeCurrentPassword,  
+    updateAccountDetails,  
+    updateUserAvatar        
 } from "../controllers/user.controller.js";
+import { getUserChannelProfile } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+
+// Publicly accessible channel lookups
 
 const router = Router();
 
@@ -35,4 +38,5 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails);
 // Uses Multer middleware to grab a single file field named "avatar"
 router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
 
+router.route("/c/:username").get(getUserChannelProfile);
 export default router;

@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { Video } from "../models/video.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadVideoToCloudPipeline, uploadToImageKit, deleteFromS3, deleteFromImageKit } from "../utils/cloudStorage.js";
+import { User } from "../models/user.model.js";
 
 // 1. PUBLISH A VIDEO
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -253,11 +254,39 @@ const getRelatedVideos = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, recommendations, "Related videos compiled successfully"));
 });
 
+// 7. GET VIDEOS BY CHANNEL USERNAME
+const getVideosByChannel = asyncHandler(async (req, res) => {
+    const { username } = req.params;
+
+    if (!username?.trim()) {
+        throw new ApiError(400, "Channel username is missing");
+    }
+
+    // Find the user first to obtain their Object ID
+    const user = await User.findOne({ username: username.toLowerCase().trim() });
+    if (!user) {
+        throw new ApiError(404, "Channel user not found");
+    }
+
+    // Query all published videos owned by this user
+    const videos = await Video.find({
+        owner: user._id,
+        isPublished: true
+    })
+    .populate("owner", "username fullName avatar")
+    .sort({ createdAt: -1 });
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, videos, "Channel specific videos retrieved successfully"));
+});
+
 export {
     publishAVideo,
     getAllVideos,
     getVideoById,
     updateVideo,  
     deleteVideo,
-    getRelatedVideos  
+    getRelatedVideos,
+    getVideosByChannel 
 };

@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadToImageKit } from "../utils/cloudStorage.js";
+import mongoose from "mongoose";
 
 // Helper function to generate tokens and update the refresh token in the database
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -233,11 +234,82 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 });
 
 
+// 7. GET USER CHANNEL PROFILE
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const { username } = req.params;
+
+    if (!username?.trim()) {
+        throw new ApiError(400, "Username parameter is missing");
+    }
+
+    // Run an aggregation to fetch the user profile alongside real subscription metrics
+    const channelProfile = await User.aggregate([
+        {
+            $match: {
+                username: username.toLowerCase().trim()
+            }
+        },
+        {
+            // Join with subscription collection to count who subscribed to THIS user
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            // Join with subscription collection to count who THIS user subscribed to
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields: {
+                subscribersCount: { $size: "$subscribers" },
+                channelsSubscribedToCount: { $size: "$subscribedTo" },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                fullName: 1,
+                username: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1,
+                subscribersCount: 1,
+                channelsSubscribedToCount: 1,
+                isSubscribed: 1
+            }
+        }
+    ]);
+
+    if (!channelProfile?.length) {
+        throw new ApiError(404, "Target channel profile does not exist");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, channelProfile[0], "Channel profile compiled successfully"));
+});
+
+// Update your export block at the bottom to include it:
 export { 
     registerUser, 
     loginUser, 
     logoutUser, 
     changeCurrentPassword, 
     updateAccountDetails, 
-    updateUserAvatar 
+    updateUserAvatar,
+    getUserChannelProfile 
 };

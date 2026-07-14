@@ -4,6 +4,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import AppLayout from "./components/AppLayout";
 import Home from "./pages/Home";
+import Channel from "./pages/Channel";
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -39,14 +40,11 @@ function App() {
           />
 
 
-          <Route 
+                    <Route 
             path="/c/:username" 
             element={
               <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
-                <div className="space-y-4">
-                  <h2 className="text-xl font-bold">User Profile & Channel Page</h2>
-                  <p className="text-xs text-slate-400">This placeholder page will query and list your uploaded streams and account details.</p>
-                </div>
+                <Channel />
               </AppLayout>
             } 
           />

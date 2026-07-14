@@ -5,30 +5,34 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
-  // Mock user profile data
-  const [user] = useState({
-    username: "himanshu",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop"
-  });
+  // ◄── Set to null by default so it correctly defaults to "Sign In" and shows the vector avatar
+  const [user, setUser] = useState(null); 
 
   const handleLogout = () => {
+    setUser(null); 
     navigate("/login");
   };
 
-  // Structured array mapping out clean SVGs and dynamic text parameters
+  const handleAvatarClick = (e) => {
+    if (!user) {
+      e.preventDefault();
+      navigate("/login");
+    }
+  };
+
   const navItems = [
     {
       label: "Home Feed",
       path: "/home",
       icon: (
         <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 00-1-1h-2a1 1 0 00-1 1v4a1 1 0 001 1" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 00-1-1h-2a1 1 0 00-1 1v4a1 1 0 001 1m6 0v-4a1 1 0 00-1-1h-2a1 1 0 00-1 1v4a1 1 0 001 1" />
         </svg>
       )
     },
     {
       label: "My Channel",
-      path: `/c/${user.username}`,
+      path: user ? `/c/${user.username}` : "/login",
       icon: (
         <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -122,7 +126,7 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
           </div>
         </div>
 
-        {/* Action Controls */}
+        {/* Action Controls Menu */}
         <div className="flex items-center gap-4">
           <button
             onClick={toggleTheme}
@@ -141,37 +145,52 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
             )}
           </button>
           
-          <button 
-            onClick={handleLogout}
-            className="hidden xs:block bg-slate-800/40 hover:bg-slate-800 border border-slate-700/60 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-          >
-            Log Out
-          </button>
+          {user ? (
+            <button 
+              onClick={handleLogout}
+              className={`text-xs font-bold px-3 py-2 rounded-xl border transition-colors cursor-pointer ${
+                isDarkMode 
+                  ? "bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800" 
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              Log Out
+            </button>
+          ) : (
+            <button 
+              onClick={() => navigate("/login")}
+              className="bg-indigo-600 text-white text-xs font-semibold px-3 py-2 rounded-xl hover:bg-indigo-700 shadow-md transition-all cursor-pointer"
+            >
+              Sign In
+            </button>
+          )}
 
           <Link 
-            to={`/c/${user.username}`} 
-            className="h-8 w-8 rounded-full overflow-hidden border border-indigo-500/30 hover:border-indigo-500 transition-all duration-200 shadow-sm shrink-0 cursor-pointer hover:scale-105"
-            title="View your channel"
+            to={user ? `/c/${user.username}` : "/login"} 
+            onClick={handleAvatarClick}
+            className={`h-8 w-8 rounded-full overflow-hidden border transition-all duration-200 shadow-sm shrink-0 cursor-pointer hover:scale-105 flex items-center justify-center ${
+              isDarkMode ? "border-slate-800 bg-white" : "border-slate-200 bg-white"
+            }`}
+            title={user ? "View your channel" : "Log into account"}
           >
-            <img 
-              src={user.avatar} 
-              alt="User profile avatar" 
-              className="h-full w-full object-cover"
-            />
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              <svg className="w-6 h-6 text-slate-400 mt-1.5" fill="currentColor" viewBox="0 0 24 24">
+                <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+              </svg>
+            )}
           </Link>
         </div>
       </header>
 
       {/* BODY ARCHITECTURE */}
       <div className="flex w-full h-full overflow-hidden relative">
-        
-        {/* REFACTORED SIDEBAR NAVIGATION BLOCK */}
         <aside className={`h-full border-r shrink-0 transition-all duration-300 overflow-y-auto flex flex-col items-center p-3 ${
           isSidebarOpen ? "w-64" : "w-16"
         } ${isDarkMode ? "bg-[#0d0e15] border-slate-800/60" : "bg-white border-slate-200"}`}>
           <nav className="space-y-2 w-full">
             {navItems.map((item, index) => {
-              // Highlight the first element to mock an active home state route layout
               const isActive = index === 0;
               return (
                 <Link
@@ -186,7 +205,6 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
                   }`}
                   title={!isSidebarOpen ? item.label : undefined}
                 >
-                  {/* Clean upscaled inline SVG icon template */}
                   <div className="transform group-hover:scale-105 transition-transform duration-150">
                     {item.icon}
                   </div>
@@ -197,12 +215,10 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
           </nav>
         </aside>
 
-        {/* PRIMARY MAIN LAYOUT FRAME */}
         <main className="flex-1 h-full overflow-y-auto p-6 md:p-8 relative">
           {children}
         </main>
       </div>
-
     </div>
   );
 }
