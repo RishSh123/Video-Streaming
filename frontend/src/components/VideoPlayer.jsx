@@ -7,25 +7,27 @@ export default function VideoPlayer({ options, onReady }) {
   const playerRef = useRef(null);
 
   useEffect(() => {
-    // Make sure Video.js initializes only once
+    // 1. Make sure Video.js initializes only once on initial mount
     if (!playerRef.current) {
       const videoElement = document.createElement("video-js");
+      
+      // Centers the big play button and makes the player fluidly responsive
       videoElement.classList.add("vjs-big-play-centered", "vjs-fluid");
       videoRef.current.appendChild(videoElement);
 
       const player = (playerRef.current = videojs(videoElement, options, () => {
-        videojs.log("player is ready");
+        videojs.log("Player initialized successfully");
         onReady && onReady(player);
       }));
     } else {
-      // If options change later, update the existing player instance
+      // 2. If options alter later (like navigating to a new video), update the instance
       const player = playerRef.current;
       player.autoplay(options.autoplay);
       player.src(options.sources);
     }
   }, [options, videoRef]);
 
-  // Clean up and dispose of the player instance when the component unmounts
+  // 3. Clean up and completely dispose of the player instance when unmounting
   useEffect(() => {
     const player = playerRef.current;
 

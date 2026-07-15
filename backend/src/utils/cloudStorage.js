@@ -1,7 +1,15 @@
+import ffmpeg from "fluent-ffmpeg";
+import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import ffprobeInstaller from "@ffprobe-installer/ffprobe";
+
+// Point fluent-ffmpeg directly to the static package binaries
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+ffmpeg.setFfprobePath(ffprobeInstaller.path);
 import { S3Client, PutObjectCommand,DeleteObjectCommand } from "@aws-sdk/client-s3";
 import ImageKit from "imagekit";
 import fs from "fs";
 import path from "path";
+
 
 // 1. Initialize AWS S3 Client
 const s3Client = new S3Client({
@@ -18,6 +26,17 @@ const imagekit = new ImageKit({
     privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
     urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
 });
+
+const getLocalVideoDuration = (filePath) => {
+    return new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(filePath, (err, metadata) => {
+            if (err) return reject(err);
+            // Extract precise duration length in seconds
+            const duration = metadata?.format?.duration;
+            resolve(duration ? Math.round(duration) : 0);
+        });
+    });
+};
 
 /**
  * Uploads a local file (like an avatar or thumbnail) directly to ImageKit Media Library
@@ -47,6 +66,8 @@ export const uploadToImageKit = async (localFilePath, folder = "/general") => {
     }
 };
 
+
+
 /**
  * Uploads a heavy raw MP4 video directly to private AWS S3, 
  * and returns the structured ImageKit HLS adaptive streaming URL.
@@ -55,10 +76,12 @@ export const uploadVideoToCloudPipeline = async (localFilePath) => {
     try {
         if (!localFilePath) return null;
 
+        // 1. Automatically calculate the duration BEFORE uploading or unlinking the file
+        const duration = await getLocalVideoDuration(localFilePath);
+
         const fileStream = fs.createReadStream(localFilePath);
         const uniqueFileName = `${Date.now()}-${path.basename(localFilePath)}`;
 
-        // Put object parameters for our private AWS bucket
         const uploadParams = {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: uniqueFileName,
@@ -72,19 +95,20 @@ export const uploadVideoToCloudPipeline = async (localFilePath) => {
         // Clean up our local storage node
         fs.unlinkSync(localFilePath);
 
-        // Construct the HLS Adaptive Bitrate URL using ImageKit's master playlist endpoint syntax.
-        // This targets the newly uploaded raw video in S3 and activates dynamic segmentation.
         const cleanEndpoint = process.env.IMAGEKIT_URL_ENDPOINT.replace(/\/$/, "");
         const hlsStreamingUrl = `${cleanEndpoint}/ik-master.m3u8?ik-s=${uniqueFileName}&ik-transform=f-hls`;
 
-        return hlsStreamingUrl;
+        // 2. Return BOTH the streaming URL string and the computed duration
+        return {
+            videoUrl: hlsStreamingUrl,
+            duration: duration
+        };
     } catch (error) {
         if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
         console.error("AWS S3 Video Pipeline Error:", error);
         return null;
     }
 };
-
 /**
  * Deletes an object from the private AWS S3 bucket
  */

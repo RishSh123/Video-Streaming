@@ -5,7 +5,13 @@ import { useNavigate } from "react-router-dom";
 
 export default function Home() {
   const navigate = useNavigate();
-
+  const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+};
+  
   // React Query hooks handles storage caching & synchronization tasks effortlessly
   const { data: videos, isLoading, isError, error } = useQuery({
     queryKey: ["homeVideos"],
@@ -54,9 +60,10 @@ export default function Home() {
                   alt={video.title}
                   className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-200" 
                 />
-                <div className="absolute bottom-2 right-2 bg-black/75 px-1.5 py-0.5 rounded text-[10px] font-bold text-white tracking-wider">
-                  {video.duration ? Math.floor(video.duration) + "s" : "0:00"}
-                </div>
+                {/* Inside src/pages/Home.jsx - Dynamic Overlay Duration Label */}
+              <div className="absolute bottom-2 right-2 bg-black/75 px-1.5 py-0.5 rounded text-[10px] font-bold text-white tracking-wider">
+                {formatDuration(video.duration)}
+              </div>
               </div>
 
               {/* Channel metadata specs information rows */}

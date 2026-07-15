@@ -18,3 +18,10 @@ export const fetchChannelVideos = async (username) => {
   const response = await apiClient.get(`/videos/c/${username}`);
   return response.data.data;
 };
+
+// Fetch detailed document schema for a specific video file by its ID
+// Fetch a specific video record by its unique Object ID
+export const fetchVideoDetails = async (videoId) => {
+  const response = await apiClient.get(`/videos/v/${videoId}`);
+  return response.data.data;
+};

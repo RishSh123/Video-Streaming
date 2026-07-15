@@ -4,6 +4,8 @@ import { Video } from "../models/video.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadVideoToCloudPipeline, uploadToImageKit, deleteFromS3, deleteFromImageKit } from "../utils/cloudStorage.js";
 import { User } from "../models/user.model.js";
+import mongoose from "mongoose";
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 // 1. PUBLISH A VIDEO
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -24,11 +26,14 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Thumbnail image file is required");
     }
 
-    // Upload raw video to AWS S3 & get back ImageKit HLS tracking URL
-    const videoUrl = await uploadVideoToCloudPipeline(videoFileLocalPath);
-    if (!videoUrl) {
+    // Upload raw video to AWS S3 & get back ImageKit HLS tracking URL alongside automated duration metrics
+    const uploadResult = await uploadVideoToCloudPipeline(videoFileLocalPath);
+    if (!uploadResult) {
         throw new ApiError(500, "Failed to upload video asset to the cloud pipeline");
     }
+
+    // Destructure the values computed inside the updated pipeline utility function (Step 3)
+    const { videoUrl, duration } = uploadResult;
 
     // Upload thumbnail to ImageKit media library
     const thumbnailUrl = await uploadToImageKit(thumbnailLocalPath, "/thumbnails");
@@ -41,7 +46,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         ? tags.split(",").map(tag => tag.trim()) 
         : [];
 
-    // Save record to MongoDB database
+    // Save record to MongoDB database with auto-calculated duration metrics
     const video = await Video.create({
         videoUrl,
         thumbnailUrl,
@@ -49,7 +54,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
         description,
         category,
         tags: processedTags,
-        owner: req.user?._id, // Set video ownership using our verified session user
+        owner: req.user?._id,
+        duration: duration || 0, // ◄── Populated automatically from the destructured pipeline metrics!
         isPublished: true
     });
 

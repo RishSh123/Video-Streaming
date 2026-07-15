@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import AppLayout from "./components/AppLayout";
 import Home from "./pages/Home";
 import Channel from "./pages/Channel";
+import Watch from "./pages/Watch";;
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -40,7 +41,7 @@ function App() {
           />
 
 
-                    <Route 
+            <Route 
             path="/c/:username" 
             element={
               <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
@@ -48,6 +49,16 @@ function App() {
               </AppLayout>
             } 
           />
+
+          <Route 
+            path="/watch/:videoId" 
+            element={
+              <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
+                <Watch />
+              </AppLayout>
+            } 
+          />
+
         </Routes>
       </div>
     </Router>
