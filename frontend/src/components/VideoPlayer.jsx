@@ -25,7 +25,7 @@ export default function VideoPlayer({ options, onReady }) {
       player.autoplay(options.autoplay);
       player.src(options.sources);
     }
-  }, [options, videoRef]);
+  }, [options, onReady]);
 
   // 3. Clean up and completely dispose of the player instance when unmounting
   useEffect(() => {

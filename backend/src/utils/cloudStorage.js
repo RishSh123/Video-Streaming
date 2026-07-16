@@ -95,14 +95,19 @@ export const uploadVideoToCloudPipeline = async (localFilePath) => {
         // Clean up our local storage node
         fs.unlinkSync(localFilePath);
 
+        // Clean the base URL endpoint from your environment config
         const cleanEndpoint = process.env.IMAGEKIT_URL_ENDPOINT.replace(/\/$/, "");
-        const hlsStreamingUrl = `${cleanEndpoint}/ik-master.m3u8?ik-s=${uniqueFileName}&ik-transform=f-hls`;
 
-        // 2. Return BOTH the streaming URL string and the computed duration
+        // 1. Construct the path pointing directly to the video filename
+        // 2. Append the required manifest file and resolution transformation query exactly per the guide
+        const hlsStreamingUrl = `${cleanEndpoint}/${uniqueFileName}/ik-master.m3u8?tr=sr-360_480_720_1080`;
+
+        // Return both properties back to your controller wrapper block
         return {
             videoUrl: hlsStreamingUrl,
             duration: duration
         };
+        
     } catch (error) {
         if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
         console.error("AWS S3 Video Pipeline Error:", error);
