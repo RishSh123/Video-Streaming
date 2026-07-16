@@ -14,20 +14,20 @@ const getVideoComments = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video identifier format");
     }
 
-    // Verify video exists before running pipeline
     const video = await Video.findById(videoId);
     if (!video) {
         throw new ApiError(404, "Video track not found");
     }
 
-    // Construct an aggregation pipeline to fetch comments, join owner info, and count likes
+    // Extract user ID safely if user is authenticated (can be populated via an optional auth middleware variant, or reading req.user if present)
+    const currentUserId = req.user?._id ? new mongoose.Types.ObjectId(req.user._id) : null;
+
     const commentsAggregation = Comment.aggregate([
         {
             $match: {
                 video: new mongoose.Types.ObjectId(videoId)
             }
         },
-        // Join user profile details for comment authors
         {
             $lookup: {
                 from: "users",
@@ -45,7 +45,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
                 ]
             }
         },
-        // Join Likes collection to find how many likes this comment has accumulated
         {
             $lookup: {
                 from: "likes",
@@ -57,20 +56,23 @@ const getVideoComments = asyncHandler(async (req, res) => {
         {
             $addFields: {
                 author: { $first: "$author" },
-                likesCount: { $size: "$likes" }
+                likesCount: { $size: "$likes" },
+                // NEW FIELD: Returns true if the active logged-in user matches any record in the likes array
+                isLikedLocal: currentUserId 
+                    ? { $in: [currentUserId, "$likes.likedBy"] } 
+                    : false
             }
         },
         {
             $project: {
-                likes: 0 // Remove raw array to keep payload lightweight
+                likes: 0
             }
         },
         {
-            $sort: { createdAt: -1 } // Chronological stream: newest responses first
+            $sort: { createdAt: -1 }
         }
     ]);
 
-    // Execute paginated queries using our aggregated pipeline engine
     const options = {
         page: parseInt(page, 10),
         limit: parseInt(limit, 10)

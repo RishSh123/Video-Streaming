@@ -96,20 +96,116 @@ const getAllVideos = asyncHandler(async (req, res) => {
 });
 
 // 3. GET VIDEO BY ID
+// 3. GET VIDEO BY ID (Upgraded with dynamic like verification tracking)
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
 
-    const video = await Video.findById(videoId).populate("owner", "username fullName avatar");
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video identifier format");
+    }
 
-    if (!video || !video.isPublished) {
+    // Extract user ID if the current session is authenticated
+    const currentUserId = req.user?._id ? new mongoose.Types.ObjectId(req.user._id) : null;
+
+    // Run an aggregation pipeline to pull metadata, count likes, and track user relationship status
+    const videoAggregation = await Video.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(videoId),
+                isPublished: true
+            }
+        },
+        // Join with users collection to populate publisher owner properties
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        // Join with likes collection to analyze engagement structures
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes"
+            }
+        },
+        // Inside your getVideoById controller pipeline (controllers/video.controller.js)
+// Add this $lookup stage right along with the user and like joins:
+{
+    $lookup: {
+        from: "subscriptions",
+        let: { channelId: "$owner" },
+        pipeline: [
+            {
+                $match: {
+                    $expr: {
+                        $and: [
+                            { $eq: ["$channel", "$$channelId"] },
+                            { $eq: ["$subscriber", currentUserId] }
+                        ]
+                    }
+                }
+            }
+        ],
+        as: "isSubscribed"
+    }
+},
+{
+    $lookup: {
+        from: "subscriptions",
+        localField: "owner",
+        foreignField: "channel",
+        as: "subscribers"
+    }
+},
+{
+    $addFields: {
+        owner: { $first: "$ownerDetails" },
+        likesCount: { $size: "$likes" },
+        isLikedLocal: currentUserId ? { $in: [currentUserId, "$likes.likedBy"] } : false,
+        // NEW METRICS:
+        isSubscribedLocal: currentUserId ? { $gt: [{ $size: "$isSubscribed" }, 0] } : false,
+        subscribersCount: { $size: "$subscribers" }
+    }
+},
+        {
+            $project: {
+                ownerDetails: 0,
+                likes: 0 // Drop raw array to keep payload lightweight
+            }
+        }
+    ]);
+
+    const video = videoAggregation[0];
+
+    if (!video) {
         throw new ApiError(404, "Video track not found");
     }
 
-    // 1. Increment view count systematically per hit
-    video.views += 1;
-    await video.save({ validateBeforeSave: false });
+    // Increment view count systematically per hit using atomic database operation
+    await Video.findByIdAndUpdate(
+        videoId,
+        { $inc: { views: 1 } },
+        { validateBeforeSave: false }
+    );
 
-    // 2. Watch History Log: If a user is logged in, append this video to their history array
+    // Keep the local video object count synchronized for the immediate endpoint response
+    video.views += 1;
+
+    // Watch History Log: If a user is logged in, append this video to their history array
     if (req.user?._id) {
         await User.findByIdAndUpdate(
             req.user._id,
