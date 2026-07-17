@@ -7,6 +7,8 @@ import Home from "./pages/Home";
 import Channel from "./pages/Channel";
 import Watch from "./pages/Watch";
 import WatchHistory from "./pages/WatchHistory";
+import Playlists from "./pages/Playlists";
+import LikedVideos from "./pages/LikedVideos";
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -68,6 +70,25 @@ function App() {
               </AppLayout>
             } 
           />
+
+          <Route 
+            path="/playlists" 
+            element={
+              <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
+                <Playlists />
+              </AppLayout>
+            } 
+          />
+
+          <Route 
+            path="/playlists/liked-videos" 
+            element={
+              <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
+                <LikedVideos />
+              </AppLayout>
+            } 
+          />
+
 
         </Routes>
       </div>

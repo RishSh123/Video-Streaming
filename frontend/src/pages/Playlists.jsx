@@ -44,9 +44,9 @@ export default function Playlists() {
           <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75c.621 0 1.125.504 1.125 1.125v1.125c0 .621-.504 1.125-1.125 1.125H5.625a1.125 1.125 0 0 1-1.125-1.125V5.625c0-.621.504-1.125 1.125-1.125Z" />
           </svg>
-          Your Library Collections
+          Your Library
         </h2>
-        <p className="text-[11px] text-slate-400 mt-1 font-medium">Manage your custom tracking lists, updates, and algorithmic playlists.</p>
+        
       </div>
 
       {/* ================= SECTION 1: AUTO-GENERATED SYSTEM PLAYLISTS ================= */}
@@ -73,7 +73,6 @@ export default function Playlists() {
               </div>
             </div>
             <div className="pt-2 px-1 flex justify-between items-center text-[10px] text-slate-500 font-semibold">
-              <span>Auto-compiled collection</span>
               <span>{likedVideos.length} clips</span>
             </div>
           </div>

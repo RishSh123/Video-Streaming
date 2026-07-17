@@ -59,6 +59,8 @@ export default function WatchHistory() {
             if (!video) return null;
             return (
               <div 
+                style={{ cursor: 'pointer'}}
+                onClick={() => navigate(`/watch/${video._id}`)}
                 key={video._id}
                 className="group flex flex-col sm:flex-row gap-5 p-3 rounded-2xl bg-[#0d0e15]/40 border border-slate-900/40 hover:bg-[#121420]/60 hover:border-indigo-500/20 transition-all duration-200 relative shadow-sm"
               >
