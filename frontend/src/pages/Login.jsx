@@ -21,17 +21,23 @@ export default function Login({ isDarkMode, toggleTheme }) {
   // React Query Mutation: Handles the asynchronous session establishment pipeline cleanly
   const mutation = useMutation({
     mutationFn: async (credentials) => {
-      // Handles parsing backend logic check via login route endpoint
+      const isEmail = credentials.usernameOrEmail.includes("@");
+      
       const response = await apiClient.post("/users/login", {
-        // Handle variations if user provides email vs username
-        email: credentials.usernameOrEmail.includes("@") ? credentials.usernameOrEmail.trim() : undefined,
-        username: !credentials.usernameOrEmail.includes("@") ? credentials.usernameOrEmail.toLowerCase().trim() : undefined,
+        // Provide empty strings or null instead of undefined to satisfy the body parsing rules
+        email: isEmail ? credentials.usernameOrEmail.trim() : "",
+        username: !isEmail ? credentials.usernameOrEmail.toLowerCase().trim() : "",
         password: credentials.password
       });
       return response.data;
     },
     onSuccess: (data) => {
-      // Redirect user directly into the video stream dashboard view upon verification
+      const { accessToken, user } = data.data;
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      window.dispatchEvent(new Event("auth-state-change"));
+      
       navigate("/home");
     },
     onError: (err) => {
@@ -142,11 +148,6 @@ export default function Login({ isDarkMode, toggleTheme }) {
           <h2 className={`text-4xl font-bold tracking-tight text-center mb-7 md:text-left transition-colors ${
             isDarkMode ? "text-white" : "text-slate-900"
           }`}>Login to Your Account</h2>
-          <p className={`text-xs mb-6 text-center md:text-left transition-colors ${
-            isDarkMode ? "text-slate-400" : "text-slate-500"
-          }`}>
-            
-          </p>
 
           {error && (
             <div className="bg-rose-950/30 border border-rose-900/50 text-rose-300 text-xs p-3 rounded-xl mb-5 text-center font-medium">

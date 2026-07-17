@@ -21,7 +21,7 @@ router.route("/").get(getAllVideos);
 // Add this right along your other individual video routes
 router.route("/v/:videoId/related").get(getRelatedVideos);
 router.route("/v/:videoId")
-    .get(getVideoById)
+    .get(verifyJWT,getVideoById)
     .patch(verifyJWT, upload.single("thumbnail"), updateVideo) // ◄── Add this for updating details/thumbnail
     .delete(verifyJWT, deleteVideo);
 

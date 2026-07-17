@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState ,useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchVideoDetails } from "../utils/videoApi";
@@ -181,7 +181,11 @@ const toggleSubscriptionMutation = useMutation({
 
 
   // Video.js player options block
-  const videoJsOptions = {
+  // Memoize player options to isolate updates from inputs, comments, or reaction cycles
+const videoJsOptions = React.useMemo(() => {
+  if (!video?.videoUrl) return null;
+  
+  return {
     autoplay: true,
     controls: true,
     responsive: true,
@@ -194,6 +198,7 @@ const toggleSubscriptionMutation = useMutation({
       },
     ],
   };
+}, [video?.videoUrl, video?.thumbnailUrl]); // ◄── Re-evaluates ONLY when the actual source asset changes!
 
   if (isLoading) {
     return (
@@ -218,7 +223,7 @@ const toggleSubscriptionMutation = useMutation({
       <div className="flex-1 space-y-4 overflow-hidden">
         
         <div className="aspect-video w-full rounded-2xl bg-black border border-slate-800/40 overflow-hidden shadow-2xl relative">
-          {video?.videoUrl && <VideoPlayer options={videoJsOptions} />}
+          {videoJsOptions && <VideoPlayer options={videoJsOptions} />}
         </div>
 
         {/* Video Text Metadata Layout */}
@@ -294,31 +299,31 @@ const toggleSubscriptionMutation = useMutation({
   </div>
 
   {/* DYNAMIC ACTION BUTTON: Prevent self-subscription rendering locally */}
-  {storedUser?._id !== video?.owner?._id && (
-    <button
-      
-      onClick={() => {
-        if (!isLoggedIn) {
-          navigate("/login");
-          return;
-        }
-        toggleSubscriptionMutation.mutate(video?.owner?._id);
-      }}
-      disabled={toggleSubscriptionMutation.isPending}
-      className={`text-xs font-bold hover:bg-purple-800 hover:scale-105 px-5 py-2 rounded-full transition-all tracking-wide shadow-sm self-start sm:self-auto ${
-        video?.isSubscribedLocal
-          ? "bg-slate-800 text-slate-400 border border-slate-700/50 hover:bg-rose-950/20 hover:text-rose-400 hover:border-rose-900/30"
-          : "bg-indigo-600 text-white hover:bg-indigo-500"
-      }`}
-    >
-      {toggleSubscriptionMutation.isPending 
-        ? "Processing..." 
-        : video?.isSubscribedLocal 
-          ? "Subscribed" 
-          : "Subscribe"
+  {/* DYNAMIC ACTION BUTTON: Prevent self-subscription rendering locally */}
+{storedUser?._id !== video?.owner?._id && (
+  <button
+    onClick={() => {
+      if (!isLoggedIn) {
+        navigate("/login");
+        return;
       }
-    </button>
-  )}
+      toggleSubscriptionMutation.mutate(video?.owner?._id);
+    }}
+    disabled={toggleSubscriptionMutation.isPending}
+    className={`text-xs font-bold hover:bg-purple-800 hover:scale-105 px-5 py-2 rounded-full transition-all tracking-wide shadow-sm self-start sm:self-auto ${
+      (isLoggedIn && video?.isSubscribedLocal)
+        ? "bg-slate-800 text-slate-400 border border-slate-700/50 hover:bg-rose-950/20 hover:text-rose-400 hover:border-rose-900/30"
+        : "bg-indigo-600 text-white hover:bg-indigo-500"
+    }`}
+  >
+    {toggleSubscriptionMutation.isPending 
+      ? "Processing..." 
+      : (isLoggedIn && video?.isSubscribedLocal) 
+        ? "Subscribed" 
+        : "Subscribe"
+    }
+  </button>
+)}
 </div>
 
           {/* Context Description Summary Box */}

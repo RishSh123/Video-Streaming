@@ -38,5 +38,5 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails);
 // Uses Multer middleware to grab a single file field named "avatar"
 router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
 
-router.route("/c/:username").get(getUserChannelProfile);
+router.route("/c/:username").get(verifyJWT,getUserChannelProfile);
 export default router;

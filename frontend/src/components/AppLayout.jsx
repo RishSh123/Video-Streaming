@@ -1,14 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function AppLayout({ children, isDarkMode, toggleTheme }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
-  // ◄── Set to null by default so it correctly defaults to "Sign In" and shows the vector avatar
-  const [user, setUser] = useState(null); 
+  // ◄── FIXED: Initialize dynamically from localStorage so it reflects active session instantly
+  const [user, setUser] = useState(() => {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  });
+
+  // ◄── FIXED: Listen to dynamic authentication events across the browser context
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setUser(JSON.parse(localStorage.getItem("user") || "null"));
+    };
+
+    window.addEventListener("storage", handleAuthChange);
+    window.addEventListener("auth-state-change", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener("auth-state-change", handleAuthChange);
+    };
+  }, []);
 
   const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
     setUser(null); 
     navigate("/login");
   };
@@ -168,17 +187,21 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
           <Link 
             to={user ? `/c/${user.username}` : "/login"} 
             onClick={handleAvatarClick}
-            className={`h-8 w-8 rounded-full overflow-hidden border transition-all duration-200 shadow-sm shrink-0 cursor-pointer hover:scale-105 flex items-center justify-center ${
-              isDarkMode ? "border-slate-800 bg-white" : "border-slate-200 bg-white"
+            className={`h-8 w-8 rounded-full overflow-hidden border transition-all duration-200 shadow-sm shrink-0 cursor-pointer hover:scale-105 flex items-center justify-center bg-slate-800 ${
+              isDarkMode ? "border-slate-800" : "border-slate-200"
             }`}
             title={user ? "View your channel" : "Log into account"}
           >
-            {user?.avatar ? (
+            {user?.avatar && (user.avatar.startsWith("http://") || user.avatar.startsWith("https://")) ? (
               <img src={user.avatar} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
-              <svg className="w-6 h-6 text-slate-400 mt-1.5" fill="currentColor" viewBox="0 0 24 24">
-                <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-              </svg>
+              <div className="w-full h-full flex items-center justify-center text-[10px] font-black tracking-tight text-indigo-400 bg-slate-900 uppercase">
+                {user ? user.username?.substring(0, 2) : (
+                  <svg className="w-5 h-5 text-slate-400 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
             )}
           </Link>
         </div>
