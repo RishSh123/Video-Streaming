@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom"; // ◄── Added useLocation
 
 export default function AppLayout({ children, isDarkMode, toggleTheme }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation(); // ◄── Hook to monitor our current active route path
 
-  // ◄── FIXED: Initialize dynamically from localStorage so it reflects active session instantly
+  // Initialize dynamically from localStorage so it reflects active session instantly
   const [user, setUser] = useState(() => {
     return JSON.parse(localStorage.getItem("user") || "null");
   });
 
-  // ◄── FIXED: Listen to dynamic authentication events across the browser context
+  // Listen to dynamic authentication events across the browser context
   useEffect(() => {
     const handleAuthChange = () => {
       setUser(JSON.parse(localStorage.getItem("user") || "null"));
@@ -214,7 +215,9 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
         } ${isDarkMode ? "bg-[#0d0e15] border-slate-800/60" : "bg-white border-slate-200"}`}>
           <nav className="space-y-2 w-full">
             {navItems.map((item, index) => {
-              const isActive = index === 0;
+              // ◄── FIXED: Checks if the current pathname matches the item configuration path exactly
+              const isActive = location.pathname === item.path;
+              
               return (
                 <Link
                   key={index}

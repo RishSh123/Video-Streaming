@@ -5,7 +5,8 @@ import Login from "./pages/Login";
 import AppLayout from "./components/AppLayout";
 import Home from "./pages/Home";
 import Channel from "./pages/Channel";
-import Watch from "./pages/Watch";;
+import Watch from "./pages/Watch";
+import WatchHistory from "./pages/WatchHistory";
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -55,6 +56,15 @@ function App() {
             element={
               <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
                 <Watch />
+              </AppLayout>
+            } 
+          />
+          
+          <Route 
+            path="/history" 
+            element={
+              <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
+                <WatchHistory />
               </AppLayout>
             } 
           />

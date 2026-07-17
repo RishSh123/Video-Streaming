@@ -303,10 +303,44 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, channelProfile[0], "Channel profile compiled successfully"));
 });
 
+// GET WATCH HISTORY
+const getWatchHistory = asyncHandler(async (req, res) => {
+    // Look up the current logged-in user and populate the watchHistory array
+    // We also populate the 'owner' inside each video so the frontend can display the channel name
+    const userWithHistory = await User.findById(req.user?._id)
+        .populate({
+            path: "watchHistory",
+            populate: {
+                path: "owner",
+                select: "username fullName avatar"
+            }
+        });
+
+    if (!userWithHistory) {
+        throw new ApiError(404, "User account session not found");
+    }
+
+    // Reverse the history array so the most recently watched videos appear first
+    const historyList = userWithHistory.watchHistory.reverse();
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200, 
+                historyList, 
+                "User watch history compiled successfully"
+            )
+        );
+});
+
+// Add getWatchHistory to your export block at the bottom of the file!
+
 // Update your export block at the bottom to include it:
 export { 
     registerUser, 
     loginUser, 
+    getWatchHistory,
     logoutUser, 
     changeCurrentPassword, 
     updateAccountDetails, 

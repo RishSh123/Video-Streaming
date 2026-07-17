@@ -37,8 +37,7 @@ export default function Home() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight">Recommended Streams</h2>
-        <p className="text-xs text-slate-400 mt-0.5">Explore fresh distribution content feeds curated for you.</p>
+        <h2 className="text-xl font-bold tracking-tight">Recommended Videos</h2>
       </div>
 
       {videos?.length === 0 ? (
