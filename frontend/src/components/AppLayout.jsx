@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom"; // ◄── Added useLocation
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom"; // ◄── Added useSearchParams
 
 export default function AppLayout({ children, isDarkMode, toggleTheme }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
-  const location = useLocation(); // ◄── Hook to monitor our current active route path
+  const location = useLocation();
+  const [searchParams] = useSearchParams(); // ◄── Read current parameters
+  
+  // ◄── STATE: Set initial search term matching the URL bar if a query is present
+  const [searchInput, setSearchInput] = useState(searchParams.get("q") || "");
+
+  // Keeps local search input synchronized if the parameter is changed elsewhere
+  useEffect(() => {
+    setSearchInput(searchParams.get("q") || "");
+  }, [searchParams]);
 
   // Initialize dynamically from localStorage so it reflects active session instantly
   const [user, setUser] = useState(() => {
@@ -37,6 +46,16 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
     if (!user) {
       e.preventDefault();
       navigate("/login");
+    }
+  };
+
+  // ◄── ACTION: Function to process navigation query submissions
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (searchInput.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchInput.trim())}`);
+    } else {
+      navigate("/home");
     }
   };
 
@@ -126,25 +145,30 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
           </Link>
         </div>
 
-        {/* Global Search Bar */}
-        <div className="hidden sm:flex max-w-md w-full mx-4">
+        {/* ◄── FIXED: Global Search Form Wrapper Element */}
+        <form onSubmit={handleSearchSubmit} className="hidden sm:flex max-w-md w-full mx-4">
           <div className="relative w-full">
             <input 
               type="text"
-              placeholder="Search content creators, video tags..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search content creators, video titles..."
               className={`w-full text-xs font-medium rounded-xl pl-4 pr-10 py-2 border transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500/20 ${
                 isDarkMode 
                   ? "bg-[#161925] border-slate-800 text-white placeholder-slate-500 focus:border-indigo-500" 
                   : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:bg-white"
               }`}
             />
-            <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 cursor-pointer hover:text-indigo-500 transition-colors">
+            <button 
+              type="submit"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-indigo-500 transition-colors bg-transparent border-none cursor-pointer"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-            </span>
+            </button>
           </div>
-        </div>
+        </form>
 
         {/* Action Controls Menu */}
         <div className="flex items-center gap-4">
@@ -215,7 +239,6 @@ export default function AppLayout({ children, isDarkMode, toggleTheme }) {
         } ${isDarkMode ? "bg-[#0d0e15] border-slate-800/60" : "bg-white border-slate-200"}`}>
           <nav className="space-y-2 w-full">
             {navItems.map((item, index) => {
-              // ◄── FIXED: Checks if the current pathname matches the item configuration path exactly
               const isActive = location.pathname === item.path;
               
               return (
