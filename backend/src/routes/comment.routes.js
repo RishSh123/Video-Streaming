@@ -1,17 +1,23 @@
 import { Router } from "express";
-import { getVideoComments, addComment, updateComment, deleteComment } from "../controllers/comment.controller.js";
+import { 
+    getVideoComments, 
+    addComment, 
+    updateComment, 
+    deleteComment 
+} from "../controllers/comment.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Individual Video Route Scopes (Mixed public reads, verified sessions for additions)
-router.route("/v/:videoId")
-    .get(getVideoComments)
-    .post(verifyJWT, addComment);
+// PUBLIC: Allowed for logged-out users to read discussion logs
+router.route("/v/:videoId").get(getVideoComments);
 
-// Document Modification Scopes (Requires active session verification)
+// PROTECTED LAYER: Everything below this line forces authentication
+router.use(verifyJWT);
+
+router.route("/v/:videoId").post(addComment);
 router.route("/c/:commentId")
-    .patch(verifyJWT, updateComment)
-    .delete(verifyJWT, deleteComment);
+    .patch(updateComment)
+    .delete(deleteComment);
 
 export default router;

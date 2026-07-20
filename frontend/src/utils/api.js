@@ -23,12 +23,15 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Clear expired local storage sessions and redirect to login
-      localStorage.removeItem("accessToken");
+    const originalRequest = error.config;
+    
+    // Check if the endpoint explicitly requires authentication before kicking the user out
+    if (error.response?.status === 401 && !originalRequest.url.includes("/videos/v/")) {
       localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
       window.location.href = "/login";
     }
+    
     return Promise.reject(error);
   }
 );

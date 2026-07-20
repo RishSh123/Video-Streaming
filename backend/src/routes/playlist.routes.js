@@ -12,19 +12,23 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Secure all endpoints within this router scope using verified token checking
+// 1. PUBLIC READ BASE PATHS
+router.route("/user/:userId").get(getUserPlaylists);
+
+// 2. PROTECTED LAYER FOR CREATION
 router.use(verifyJWT);
 
+// ◄── MOVED UP: Declare the absolute root route BEFORE dynamic parameters!
 router.route("/").post(createPlaylist);
 
-router.route("/:playlistId")
-    .get(getPlaylistById)
-    .patch(updatePlaylist)
-    .delete(deletePlaylist);
-
+// 3. SECURED VIDEO MEMBER TOGGLES
 router.route("/add/:videoId/:playlistId").patch(addVideoToPlaylist);
 router.route("/remove/:videoId/:playlistId").patch(removeVideoFromPlaylist);
 
-router.route("/user/:userId").get(getUserPlaylists);
+// 4. MIXED DYNAMIC LOOKUPS & MUTATIONS (Keep these at the bottom!)
+router.route("/:playlistId")
+    .get(getPlaylistById) // Accessible to verify optional state downstream
+    .patch(updatePlaylist)
+    .delete(deletePlaylist);
 
 export default router;

@@ -11,6 +11,7 @@ import Playlists from "./pages/Playlists";
 import LikedVideos from "./pages/LikedVideos";
 import Subscriptions from "./pages/Subscriptions";
 import SearchResults from "./pages/SearchResults";
+import PlaylistDetail from "./pages/PlaylistDetail";
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -108,6 +109,16 @@ function App() {
               </AppLayout>
             } 
           />
+
+          <Route 
+            path="/playlists/:playlistId" 
+            element={
+              <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
+                <PlaylistDetail />
+              </AppLayout>
+            } 
+          />
+          
 
 
         </Routes>

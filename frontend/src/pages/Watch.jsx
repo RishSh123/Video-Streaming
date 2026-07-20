@@ -5,6 +5,7 @@ import { useInView } from "react-intersection-observer"; // ◄── Import the
 import { fetchVideoDetails } from "../utils/videoApi";
 import VideoPlayer from "../components/VideoPlayer";
 import apiClient from "../utils/api";
+import PlaylistModal from "../components/PlaylistModal"; // ◄── Add playlist modal view controller reference
 
 export default function Watch() {
   const { videoId } = useParams();
@@ -13,6 +14,8 @@ export default function Watch() {
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editText, setEditText] = useState("");
+
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false); // ◄── Tracks workspace overlay triggers
 
   const storedUser = JSON.parse(localStorage.getItem("user") || "null");
   const isLoggedIn = !!storedUser;
@@ -269,17 +272,30 @@ export default function Watch() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800/50 pb-3 text-slate-400">
             <div className="text-[11px] font-semibold">{video?.views || 0} views &bull; {new Date(video?.createdAt).toLocaleDateString()}</div>
             <div className="flex items-center gap-2 self-end sm:self-auto">
-              <button
-                onClick={() => { if (!isLoggedIn) { navigate("/login"); return; } toggleVideoLikeMutation.mutate(); }}
-                disabled={toggleVideoLikeMutation.isPending}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all bg-slate-900/60 border border-slate-800/80 hover:bg-slate-800/60 ${video?.isLikedLocal ? "text-rose-500 border-rose-900/30 bg-rose-950/10" : "text-slate-300"}`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={video?.isLikedLocal ? "currentColor" : "none"} stroke="currentColor" className="w-4 h-4 stroke-[2.5]">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                </svg>
-                <span>{video?.likesCount || 0}</span>
-              </button>
-            </div>
+  {/* Existing Video Like Action Button Component */}
+  <button
+    onClick={() => { if (!isLoggedIn) { navigate("/login"); return; } toggleVideoLikeMutation.mutate(); }}
+    disabled={toggleVideoLikeMutation.isPending}
+    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all bg-slate-900/60 border border-slate-800/80 hover:bg-slate-800/60 ${video?.isLikedLocal ? "text-rose-500 border-rose-900/30 bg-rose-950/10" : "text-slate-300"}`}
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={video?.isLikedLocal ? "currentColor" : "none"} stroke="currentColor" className="w-4 h-4 stroke-[2.5]">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+    </svg>
+    <span>{video?.likesCount || 0}</span>
+  </button>
+
+  {/* ◄── NEW ARCHITECTURE: Playlist Action Control Button */}
+  <button
+    onClick={() => { if (!isLoggedIn) { navigate("/login"); return; } setIsPlaylistModalOpen(true); }}
+    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all bg-slate-900/60 border border-slate-800/80 hover:bg-slate-800/60 text-slate-300 hover:text-indigo-400 select-none cursor-pointer"
+    title="Save tracking trace to standard collection folder"
+  >
+    <svg fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15M5.25 5.625c0-.621.504-1.125 1.125-1.125h11.25c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125H6.375a1.125 1.125 0 0 1-1.125-1.125v-1.5Z" />
+    </svg>
+    <span>Save</span>
+  </button>
+</div>
           </div>
 
           {/* Publisher Metadata Card */}
@@ -447,6 +463,12 @@ export default function Watch() {
         )}
       </div>
 
+          {isPlaylistModalOpen && (
+        <PlaylistModal 
+          videoId={videoId} 
+          onClose={() => setIsPlaylistModalOpen(false)} 
+        />
+      )}
     </div>
   );
 }

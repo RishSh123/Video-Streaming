@@ -5,27 +5,30 @@ import {
     getVideoById, 
     updateVideo, 
     deleteVideo,
-    getRelatedVideos 
+    getRelatedVideos,
+    getVideosByChannel
 } from "../controllers/video.controller.js";
-import { getVideosByChannel } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
-// Publicly accessible video index filtering by creator channel
-
 const router = Router();
 
-
-// Public routes (anyone can browse catalog or hit a specific video details page)
+// ==================== PUBLIC ROUTES ====================
+// Anyone can browse the catalog, view recommendations, look up channels, or play a video
 router.route("/").get(getAllVideos);
-// Add this right along your other individual video routes
 router.route("/v/:videoId/related").get(getRelatedVideos);
+router.route("/c/:username").get(getVideosByChannel);
+
+// Fetching a video detail is public so logged-out guests can watch it!
+router.route("/v/:videoId").get(getVideoById); 
+
+
+// ==================== SECURED MUTATION ROUTES ====================
+// Modifying actions (POST, PATCH, DELETE) require a verified user session token
 router.route("/v/:videoId")
-    .get(verifyJWT,getVideoById)
-    .patch(verifyJWT, upload.single("thumbnail"), updateVideo) // ◄── Add this for updating details/thumbnail
+    .patch(verifyJWT, upload.single("thumbnail"), updateVideo) 
     .delete(verifyJWT, deleteVideo);
 
-// Secured routes (only verified logged-in users can publish content)
 router.route("/publish").post(
     verifyJWT,
     upload.fields([
@@ -34,6 +37,5 @@ router.route("/publish").post(
     ]),
     publishAVideo
 );
-router.route("/c/:username").get(getVideosByChannel);
 
 export default router;

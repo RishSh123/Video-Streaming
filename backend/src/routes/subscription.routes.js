@@ -8,14 +8,13 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Apply verified session token guard across all routes
+// PUBLIC: Logged-out users can view who subscribes to a public creator channel
+router.route("/c/:channelId").get(getUserChannelSubscribers);
+
+// PROTECTED LAYER: Managing user follows is strictly locked down
 router.use(verifyJWT);
 
-router.route("/c/:channelId")
-    .post(toggleSubscription)            // Toggle interaction hook
-    .get(getUserChannelSubscribers);     // Retrieve a channel's subscriber index
-
-router.route("/u/:subscriberId")
-    .get(getSubscribedChannels);         // Retrieve channels a specific user follows
+router.route("/c/:channelId").post(toggleSubscription);
+router.route("/u/:subscriberId").get(getSubscribedChannels); // Private follow index tracking
 
 export default router;
