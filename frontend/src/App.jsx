@@ -12,6 +12,7 @@ import LikedVideos from "./pages/LikedVideos";
 import Subscriptions from "./pages/Subscriptions";
 import SearchResults from "./pages/SearchResults";
 import PlaylistDetail from "./pages/PlaylistDetail";
+import WatchLater from "./pages/WatchLater"
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -115,6 +116,15 @@ function App() {
             element={
               <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
                 <PlaylistDetail />
+              </AppLayout>
+            } 
+          />
+
+          <Route 
+            path="/playlists/watch-later" 
+            element={
+              <AppLayout isDarkMode={isDarkMode} toggleTheme={toggleTheme}>
+                <WatchLater />
               </AppLayout>
             } 
           />

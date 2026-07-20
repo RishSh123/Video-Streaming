@@ -229,6 +229,36 @@ export default function Watch() {
     },
   });
 
+  // Query 4: Pull user's watch later collection to compute initial active state
+  const { data: watchLaterVideos = [] } = useQuery({
+    queryKey: ["watchLaterVideos"],
+    queryFn: async () => {
+      const response = await apiClient.get("/watch-later");
+      return response.data.data || [];
+    },
+    enabled: isLoggedIn,
+  });
+
+  // Calculate if the active video is already tracked inside the user's watch later list
+  const isSavedToWatchLater = useMemo(() => {
+    return watchLaterVideos.some(v => (v._id || v) === videoId);
+  }, [watchLaterVideos, videoId]);
+
+  // Mutation: Toggle backend Watch Later tracking state
+  const toggleWatchLaterMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post(`/watch-later/toggle/${videoId}`);
+      return response.data.data; // Returns mapping state: { isSaved: true/false }
+    },
+    onSuccess: () => {
+      // Synchronize standard collections caches instantly across dashboard states
+      queryClient.invalidateQueries(["watchLaterVideos"]);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || "Failed to update Watch Later registry.");
+    }
+  });
+
   const videoJsOptions = React.useMemo(() => {
     if (!video?.videoUrl) return null;
     return {
@@ -284,7 +314,30 @@ export default function Watch() {
     <span>{video?.likesCount || 0}</span>
   </button>
 
-  {/* ◄── NEW ARCHITECTURE: Playlist Action Control Button */}
+  {/* ◄── NEW ARCHITECTURE: Watch Later Toggle Button */}
+  <button
+    onClick={() => { if (!isLoggedIn) { navigate("/login"); return; } toggleWatchLaterMutation.mutate(); }}
+    disabled={toggleWatchLaterMutation.isPending}
+    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all bg-slate-900/60 border border-slate-800/80 hover:bg-slate-800/60 cursor-pointer select-none ${
+      isSavedToWatchLater 
+        ? "text-indigo-400 border-indigo-900/30 bg-indigo-950/10" 
+        : "text-slate-300 hover:text-indigo-400"
+    }`}
+    title={isSavedToWatchLater ? "Remove from Watch Later" : "Save to Watch Later"}
+  >
+    <svg 
+      fill={isSavedToWatchLater ? "currentColor" : "none"} 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      viewBox="0 0 24 24" 
+      className="w-4 h-4"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+    <span>{isSavedToWatchLater ? "Saved" : "Later"}</span>
+  </button>
+
+  {/* Existing Playlist Action Control Button */}
   <button
     onClick={() => { if (!isLoggedIn) { navigate("/login"); return; } setIsPlaylistModalOpen(true); }}
     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all bg-slate-900/60 border border-slate-800/80 hover:bg-slate-800/60 text-slate-300 hover:text-indigo-400 select-none cursor-pointer"
