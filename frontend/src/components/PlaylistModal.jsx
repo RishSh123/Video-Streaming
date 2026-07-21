@@ -63,13 +63,20 @@ export default function PlaylistModal({ videoId, onClose }) {
   });
 
   const handleCreateSubmit = (e) => {
-    e.preventDefault();
-    if (!newPlaylistName.trim()) return;
-    createPlaylistMutation.mutate({
-      name: newPlaylistName.trim(),
-      description: newPlaylistDesc.trim(),
-    });
-  };
+  e.preventDefault();
+  if (!newPlaylistName.trim()) return;
+
+  // ◄── ADD THIS SECURITY CHECK: Prevent user name overlap with system keys
+  if (newPlaylistName.trim().toLowerCase() === "watch later") {
+    alert("The title 'Watch Later' is reserved for system use. Please pick another name!");
+    return;
+  }
+
+  createPlaylistMutation.mutate({
+    name: newPlaylistName.trim(),
+    description: newPlaylistDesc.trim(),
+  });
+};
 
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">

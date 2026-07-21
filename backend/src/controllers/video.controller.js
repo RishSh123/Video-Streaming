@@ -115,7 +115,7 @@ const getVideoById = asyncHandler(async (req, res) => {
                 isPublished: true
             }
         },
-        // Join with users collection to populate publisher owner properties
+        // 1. Join with users collection for creator info
         {
             $lookup: {
                 from: "users",
@@ -133,7 +133,7 @@ const getVideoById = asyncHandler(async (req, res) => {
                 ]
             }
         },
-        // Join with likes collection to analyze engagement structures
+        // 2. Join with likes collection to count total likes
         {
             $lookup: {
                 from: "likes",
@@ -142,49 +142,73 @@ const getVideoById = asyncHandler(async (req, res) => {
                 as: "likes"
             }
         },
-        // Inside your getVideoById controller pipeline (controllers/video.controller.js)
-// Add this $lookup stage right along with the user and like joins:
-{
-    $lookup: {
-        from: "subscriptions",
-        let: { channelId: "$owner" },
-        pipeline: [
-            {
-                $match: {
-                    $expr: {
-                        $and: [
-                            { $eq: ["$channel", "$$channelId"] },
-                            { $eq: ["$subscriber", currentUserId] }
-                        ]
+        // 3. ◄── FIXED: Join with likes specifically to check if the CURRENT user liked it
+        {
+            $lookup: {
+                from: "likes",
+                let: { currentVideoId: "$_id" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$video", "$$currentVideoId"] },
+                                    { $eq: ["$likedBy", currentUserId] } 
+                                ]
+                            }
+                        }
                     }
-                }
+                ],
+                as: "isLikedByCurrentUser"
             }
-        ],
-        as: "isSubscribed"
-    }
-},
-{
-    $lookup: {
-        from: "subscriptions",
-        localField: "owner",
-        foreignField: "channel",
-        as: "subscribers"
-    }
-},
-{
-    $addFields: {
-        owner: { $first: "$ownerDetails" },
-        likesCount: { $size: "$likes" },
-        isLikedLocal: currentUserId ? { $in: [currentUserId, "$likes.likedBy"] } : false,
-        // NEW METRICS:
-        isSubscribedLocal: currentUserId ? { $gt: [{ $size: "$isSubscribed" }, 0] } : false,
-        subscribersCount: { $size: "$subscribers" }
-    }
-},
+        },
+        // 4. Join with subscriptions to check if the CURRENT user is subscribed
+        {
+            $lookup: {
+                from: "subscriptions",
+                let: { channelId: "$owner" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$channel", "$$channelId"] },
+                                    { $eq: ["$subscriber", currentUserId] }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                as: "isSubscribedByCurrentUser"
+            }
+        },
+        // 5. Join with subscriptions to calculate TOTAL subscribers
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "owner",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        // 6. Project and compute boolean metrics cleanly
+        {
+            $addFields: {
+                owner: { $first: "$ownerDetails" },
+                likesCount: { $size: "$likes" },
+                subscribersCount: { $size: "$subscribers" },
+                // ◄── PERSISTENT BOOLEAN FLAGS
+                isLikedLocal: currentUserId ? { $gt: [{ $size: "$isLikedByCurrentUser" }, 0] } : false,
+                isSubscribedLocal: currentUserId ? { $gt: [{ $size: "$isSubscribedByCurrentUser" }, 0] } : false
+            }
+        },
         {
             $project: {
                 ownerDetails: 0,
-                likes: 0 // Drop raw array to keep payload lightweight
+                likes: 0,
+                subscribers: 0,
+                isLikedByCurrentUser: 0,
+                isSubscribedByCurrentUser: 0
             }
         }
     ]);
@@ -210,14 +234,14 @@ const getVideoById = asyncHandler(async (req, res) => {
         await User.findByIdAndUpdate(
             req.user._id,
             {
-                $addToSet: { watchHistory: videoId } // $addToSet ensures the ID is unique in the array
+                $addToSet: { watchHistory: videoId }
             }
         );
     }
 
     return res
         .status(200)
-        .json(new ApiResponse(200, video, "Video record retrieved and added to watch history successfully"));
+        .json(new ApiResponse(200, video, "Video record retrieved successfully"));
 });
 
 // 4. UPDATE VIDEO DETAILS & THUMBNAIL

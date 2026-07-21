@@ -6,6 +6,7 @@ import { fetchVideoDetails } from "../utils/videoApi";
 import VideoPlayer from "../components/VideoPlayer";
 import apiClient from "../utils/api";
 import PlaylistModal from "../components/PlaylistModal"; // ◄── Add playlist modal view controller reference
+import EditVideoModal from "../components/EditVideoModal";
 
 export default function Watch() {
   const { videoId } = useParams();
@@ -15,7 +16,9 @@ export default function Watch() {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editText, setEditText] = useState("");
 
+
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false); // ◄── Tracks workspace overlay triggers
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const storedUser = JSON.parse(localStorage.getItem("user") || "null");
   const isLoggedIn = !!storedUser;
@@ -26,9 +29,18 @@ export default function Watch() {
   });
 
   // Query 1: Fetch individual stream details
+  // ◄── UPDATED Query 1: Fallback Normalization
   const { data: video, isLoading, isError, error } = useQuery({
     queryKey: ["watchVideo", videoId],
-    queryFn: () => fetchVideoDetails(videoId),
+    queryFn: async () => {
+      const rawData = await fetchVideoDetails(videoId);
+      return {
+        ...rawData,
+        isLikedLocal: rawData?.isLikedLocal ?? rawData?.isLiked ?? false,
+        isSubscribedLocal: rawData?.isSubscribedLocal ?? rawData?.isSubscribed ?? false,
+      };
+    },
+    enabled: !!videoId,
   });
 
   // Query 2: Fetch corresponding categories recommendations stack
@@ -380,6 +392,18 @@ export default function Watch() {
                 {toggleSubscriptionMutation.isPending ? "Processing..." : (isLoggedIn && video?.isSubscribedLocal) ? "Subscribed" : "Subscribe"}
               </button>
             )}
+
+            {storedUser?._id === video?.owner?._id && (
+  <button
+    onClick={() => setIsEditModalOpen(true)}
+    className="text-xs font-bold bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 px-4 py-2 rounded-full transition-all shadow-sm cursor-pointer"
+  >
+    Edit Video
+  </button>
+)}
+{isEditModalOpen && (
+  <EditVideoModal video={video} onClose={() => setIsEditModalOpen(false)} />
+)}
           </div>
 
           <div className="p-4 bg-slate-900/40 border border-slate-800/60 rounded-2xl text-xs font-medium leading-relaxed mt-4 text-slate-300">

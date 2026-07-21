@@ -10,17 +10,26 @@ import {
 } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { uploadVideo } from "../middlewares/multer.middleware.js";
 
 const router = Router();
 
-// ==================== PUBLIC ROUTES ====================
-// Anyone can browse the catalog, view recommendations, look up channels, or play a video
+// Helper middleware: Parses JWT token if present, but lets guests through!
+const optionalVerifyJWT = (req, res, next) => {
+    if (req.cookies?.accessToken || req.header("Authorization")) {
+        return verifyJWT(req, res, next);
+    }
+    next();
+};
+
+// ==================== PUBLIC & OPTIONAL AUTH ROUTES ====================
+// Anyone can browse the catalog, view recommendations, look up channels
 router.route("/").get(getAllVideos);
 router.route("/v/:videoId/related").get(getRelatedVideos);
 router.route("/c/:username").get(getVideosByChannel);
 
-// Fetching a video detail is public so logged-out guests can watch it!
-router.route("/v/:videoId").get(getVideoById); 
+// ◄── FIXED: Apply optionalVerifyJWT so logged-in users get req.user populated!
+router.route("/v/:videoId").get(optionalVerifyJWT, getVideoById); 
 
 
 // ==================== SECURED MUTATION ROUTES ====================
@@ -31,7 +40,7 @@ router.route("/v/:videoId")
 
 router.route("/publish").post(
     verifyJWT,
-    upload.fields([
+    uploadVideo.fields([
         { name: "videoFile", maxCount: 1 },
         { name: "thumbnail", maxCount: 1 }
     ]),

@@ -6,11 +6,17 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 // 1. CREATE A NEW PLAYLIST
+// 1. CREATE A NEW PLAYLIST
 const createPlaylist = asyncHandler(async (req, res) => {
     const { name, description } = req.body;
 
     if (!name || name.trim() === "") {
         throw new ApiError(400, "Playlist title name is required");
+    }
+
+    // ◄── ADD THIS GATE: Stop requests from tools like Postman that bypass the UI
+    if (name.trim().toLowerCase() === "watch later") {
+        throw new ApiError(400, "The collection name 'Watch Later' is a restricted system layout keyword");
     }
 
     const playlist = await Playlist.create({
@@ -26,6 +32,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
 });
 
 // 2. FETCH A USER'S TOTAL PLAYLISTS
+// 2. FETCH A USER'S TOTAL PLAYLISTS
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
@@ -33,7 +40,11 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid user identifier format");
     }
 
-    const playlists = await Playlist.find({ owner: userId }).populate("videos", "title thumbnailUrl views duration");
+    // Exclude system playlist "Watch Later" from general user playlist queries
+    const playlists = await Playlist.find({ 
+        owner: userId,
+        name: { $ne: "Watch Later" }
+    }).populate("videos", "title thumbnailUrl views duration");
 
     return res
         .status(200)

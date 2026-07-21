@@ -2,16 +2,21 @@ import multer from "multer";
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        // Temporary folder on our disk where files will reside before cloud transit
         cb(null, "./public/temp");
     },
     filename: function (req, file, cb) {
-        // Keep original file names for clear cloud tracking, appending unique timestamps if needed
         cb(null, `${Date.now()}-${file.originalname}`);
     }
 });
 
+// Standard uploader for avatars / thumbnails (e.g., 10MB)
 export const upload = multer({ 
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // Limit files (like avatars) to 5MB for now
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
+// Dedicated uploader for large videos (e.g., 500MB)
+export const uploadVideo = multer({
+    storage,
+    limits: { fileSize: 500 * 1024 * 1024 } // 500MB (500 * 1024 * 1024 bytes)
 });

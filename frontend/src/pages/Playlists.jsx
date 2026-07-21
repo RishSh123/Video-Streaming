@@ -34,6 +34,10 @@ export default function Playlists() {
     },
     enabled: !!storedUser?._id,
   });
+  // Filter out system reserved names like "Watch Later" from custom playlists
+const filteredCustomPlaylists = customPlaylists.filter(
+  (playlist) => playlist.name?.trim().toLowerCase() !== "watch later"
+);
 
   if (likedLoading || playlistsLoading || watchLaterLoading) {
     return (
@@ -110,13 +114,13 @@ export default function Playlists() {
       {/* Your Custom Playlists rendering maps here block exactly unchanged */}
       <div className="space-y-4 pt-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 px-1">Your Custom Playlists</h3>
-        {customPlaylists.length === 0 ? (
+        {filteredCustomPlaylists.length === 0 ? (
           <div className="text-xs text-slate-500 py-10 text-center bg-slate-900/10 border border-dashed border-slate-800/40 rounded-2xl max-w-md italic font-medium">
             You haven't created any custom playlists yet.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {customPlaylists.map((playlist) => (
+            {filteredCustomPlaylists.map((playlist) => (
               <div key={playlist._id} onClick={() => navigate(`/playlists/${playlist._id}`)} className="group flex flex-col space-y-2 cursor-pointer">
                 <div className="aspect-video w-full rounded-xl bg-slate-800 overflow-hidden relative border border-slate-800/40 group-hover:border-indigo-500/40 transition-all shadow-md flex items-center justify-center bg-gradient-to-br from-[#121420] to-[#1e2338]">
                   {playlist.videos?.[0]?.thumbnailUrl ? (
